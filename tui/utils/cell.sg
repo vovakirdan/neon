@@ -1,0 +1,43 @@
+pragma module;
+
+import stdlib/strings::ASCII;
+
+pub type Color = int;
+pub enum ColorEnum = {
+    Default,
+    Black,
+    Red,
+    Green,
+    Yellow,
+    Blue,
+    Magenta,
+    Cyan,
+    White
+}
+
+pub type Attr = uint16;
+
+pub const ATTR_BOLD: Attr = 1;
+pub const ATTR_DIM: Attr = 2;
+pub const ATTR_REV: Attr = 4;
+
+pub type Cell = {
+    ch: uint32,
+    fg: Color,
+    bg: Color,
+    attr: Attr,
+}
+
+extern<Cell> {
+    pub fn new(ch: uint32, fg: Color, bg: Color, attr: Attr) -> Cell {
+        return Cell { ch = ch, fg = fg, bg = bg, attr = attr };
+    }
+
+    pub fn empty() -> Cell {
+        return Cell { ch = ASCII::SPACE to uint32, fg = ColorEnum::Default, bg = ColorEnum::Default, attr = 0 };
+    }
+
+    pub fn __eq(self: &Cell, other: &Cell) -> bool {
+        return self.ch == other.ch && self.fg == other.fg && self.bg == other.bg && self.attr == other.attr;
+    }
+}

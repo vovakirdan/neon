@@ -1,0 +1,9 @@
+import tui/utils::{Rect};
+
+@entrypoint
+fn main() {
+    let rect1 = Rect.new();
+    let rect2 = Rect.new(10, 20, 30, 40);
+    print(rect1 to string);
+    print(rect2 to string);
+}

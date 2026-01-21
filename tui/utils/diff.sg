@@ -1,0 +1,8 @@
+pragma module;
+
+pub type PatchRun = {
+    x: int,
+    y: int,
+    cells: Cell[],
+}
+

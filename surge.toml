@@ -1,0 +1,13 @@
+# Surge project manifest
+[package]
+name = "neon"
+version = "0.1.0"
+
+[run]
+main = "main.sg"
+
+[version]
+version = "0.1.0-dev"
+commit = "8816492a9316"
+message = "Add string and ANSI modules for character handling and terminal output"
+built = "2026-01-15T14:11:55Z"

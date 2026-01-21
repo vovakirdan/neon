@@ -1,0 +1,127 @@
+pragma module;
+
+import utils::{Buffer, Frame, frame, clear, resize, encode_all};
+
+pub type AppCmd = int;
+
+pub enum AppCmdEnum: AppCmd = {
+    None,
+    Quit,
+    Redraw,
+}
+
+pub contract State {}
+
+fn noop_capture(_index: int, _buf: &Buffer) -> nothing {
+    return nothing;
+}
+
+pub fn run<T: State>(
+    state: T,
+    update: fn(&mut T, Event) -> AppCmd,
+    view: fn(&T, &mut Frame) -> nothing
+) -> int {
+    return run_capture(state, update, view, noop_capture);
+}
+
+pub fn run_capture<T: State>(
+    state: T,
+    update: fn(&mut T, Event) -> AppCmd,
+    view: fn(&T, &mut Frame) -> nothing,
+    capture: fn(int, &Buffer) -> nothing
+) -> int {
+    let mut st: T = state;
+
+    term.enter();
+
+    // channel for events from term
+    let ch = make_channel::<term.TermEvent>(64:uint);
+
+    // blocking reader
+    let reader = term.read_event_async(ch);
+
+    // tick generator ; there is no tick tag event in term
+    // let ticker = spawn async {
+    //     while true {
+    //         sleep(16).await();
+    //         ch.send(Tick());
+    //     }
+    // };
+
+    // buffer
+    let (w, h) = term.term_size();
+    let mut prev = Buffer.new(w, h);
+    let mut next = Buffer.new(w, h);
+
+    let mut frame_index: int = 0;
+
+    // first render
+    {
+        clear(&mut next);
+        let mut fr = frame(&mut next);
+        view(&st, &mut fr);
+    }
+
+    {
+        capture(frame_index, &next);
+    }
+    frame_index = frame_index + 1;
+
+    {
+        let first_runs = prev.diff(&next);
+        term.term_write(encode_all(first_runs));
+        term.term_flush();
+    }
+    // swap
+    prev = next;
+    next = Buffer.new(w, h);
+
+    // main loop
+    while true {
+        // wait event (blocking, but in task sense this is OK cuz recv parks)
+        let tev_opt = ch.recv();
+        compare tev_opt {
+            nothing => break;
+            Some(tev) => {
+                let ev_opt = from_term(tev);
+                compare ev_opt {
+                    nothing => break;
+                    Some(ev) => {
+                        {
+                            let cmd = update(&mut st, ev);
+                            if (cmd == AppCmdEnum::Quit) {
+                                break;
+                            }
+                        }
+
+                        clear(&mut next);
+                        let mut fr2 = frame(&mut next);
+                        view(&st, &mut fr2);
+
+                        {
+                            capture(frame_index, &next);
+                        }
+                        frame_index = frame_index + 1;
+
+                        {
+                            let runs = prev.diff(&next);
+                            if len(runs) > (0 to uint) {
+                                term.term_write(encode_all(runs));
+                                term.term_flush();
+                            }
+                        }
+
+                        // swap buffers
+                        prev = next;
+                        next = Buffer.new(prev.w, prev.h);
+                    };
+                };
+            };
+        }
+    }
+
+    // reader.cancel();
+    // ticker.cancel();
+    term.leave();
+    return 0;
+}

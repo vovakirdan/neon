@@ -1,0 +1,116 @@
+pragma module;
+
+pub type Buffer = {
+    w: int,
+    h: int,
+    cells: Cell[],
+}
+
+pub type Frame = {
+    buf: &mut Buffer,
+    area: Rect,
+}
+
+fn empty_cell() -> Cell {
+    return Cell.empty();
+}
+
+extern<Buffer> {
+    pub fn new(w: int, h: int) -> Buffer {
+        let mut cells: Cell[] = Array::<Cell>::with_len_value((w * h) to uint, empty_cell);
+        return Buffer { w = w, h = h, cells = cells };
+    }
+
+    pub fn idx(self: &Buffer, x: int, y: int) -> int {
+        return y * self.w + x;
+    }
+
+    pub fn diff(self: &Buffer, other: &Buffer) -> PatchRun[] {
+        let mut out: PatchRun[] = [];
+        
+        for y in 0..other.h {
+            for x in 0..other.w {
+                let i = y * other.w + x;
+                if self.cells[i] == other.cells[i] {
+                    continue;
+                }
+
+                let start_x = x;
+                let mut run_cells: Cell[] = [];
+                while x < other.w {
+                    let j = y * other.w + x;
+                    if self.cells[j] == other.cells[j] { break; }
+                    run_cells.push(other.cells[j]);
+                    x = x + 1;
+                }
+                out.push(PatchRun { x = start_x, y = y, cells = run_cells });
+            }
+        }
+        return out;
+    }
+}
+
+pub fn resize(buf: &mut Buffer, w: int, h: int) -> nothing {
+    if w == buf.w && h == buf.h {
+        return nothing;
+    }
+    *buf = Buffer.new(w, h);
+    return nothing;
+}
+
+pub fn clear(buf: &mut Buffer) -> nothing {
+    for i in 0..(buf.w * buf.h) {
+        *buf.cells[i] = Cell.empty();
+    }
+    return nothing;
+}
+
+pub fn put(buf: &mut Buffer, x: int, y: int, c: Cell) -> nothing {
+    if x < 0 || y < 0 || x >= buf.w || y >= buf.h { return nothing; }
+    *buf.cells[buf.idx(x, y)] = c;
+    return nothing;
+}
+
+pub fn draw_text(buf: &mut Buffer, area: Rect, text: string, fg: Color, bg: Color, attr: Attr) -> nothing {
+    let mut x = area.x;
+    let y = area.y;
+    for i in 0..(len(text) to int) {
+        put(buf, x, y, Cell.new(text[i], fg, bg, attr));
+        x = x + 1;
+    }
+}
+
+pub fn frame(buf: &mut Buffer) -> Frame {
+    return Frame { buf = buf, area = Rect { x = 0, y = 0, w = buf.w, h = buf.h } };
+}
+
+fn cell_text(c: &Cell) -> string {
+    let res = chr(c.ch to uint);
+    return compare res {
+        Success(s) => s;
+        err => "?";
+    };
+}
+
+pub fn buffer_to_lines(buf: &Buffer) -> string[] {
+    let mut out: string[] = [];
+    let mut y: int = 0;
+    while y < buf.h {
+        let mut line: string = "";
+        let mut x: int = 0;
+        while x < buf.w {
+            let i = buf.idx(x, y);
+            let c = buf.cells[i];
+            line = line + cell_text(c);
+            x = x + 1;
+        }
+        out.push(line);
+        y = y + 1;
+    }
+    return out;
+}
+
+pub fn buffer_to_string(buf: &Buffer) -> string {
+    let lines = buffer_to_lines(buf);
+    return "\n".join(lines);
+}

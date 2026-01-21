@@ -1,0 +1,39 @@
+pragma module::widgets;
+
+import ../utils::{Rect, pad, Color, ColorEnum, ATTR_REV, Frame, draw_text};
+
+pub type MenuState = {
+    items: string[],
+    selected: int
+}
+
+pub fn menu_view(state: &MenuState, fr: &mut Frame, area: &Rect) -> nothing {
+    let inner = pad(area, 1, 1, 1, 1);
+
+    let mut i = 0;
+    while i < (len(state.items) to int) && (i < inner.h) {
+        let line_area = Rect { x = inner.x, y = inner.y + i, w = inner.w, h = 1 };
+        let item = clone(state.items[i]);
+        if i == state.selected {
+            item = "-> " + item;
+            draw_text(
+                fr.buf,
+                line_area,
+                item,
+                ColorEnum::Black,
+                ColorEnum::White,
+                ATTR_REV,
+            );
+        } else {
+            draw_text(
+                fr.buf,
+                line_area,
+                item,
+                ColorEnum::White,
+                ColorEnum::Default,
+                0,
+            );
+        }
+        i = i + 1;
+    } 
+}

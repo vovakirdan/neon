@@ -1,0 +1,70 @@
+import ../tui::{Event, KeyEvent, Resize, Tick, Quit, AppCmdEnum, AppCmd, run, run_capture};
+import ../tui/utils::{Frame, buffer_to_string, Buffer};
+import ../tui/widgets::{MenuState, menu_view};
+import stdlib/term::{Up, Down, Esc, Enter};
+
+import stdlib/fs;
+
+type AppState = {
+    menu: MenuState
+};
+
+fn max(a: int, b: int) -> int {
+    if a > b {
+        return a;
+    }
+    return b;
+}
+
+fn min(a: int, b: int) -> int {
+    if a < b {
+        return a;
+    }
+    return b;
+}
+
+fn update(st: &mut AppState, ev: Event) -> AppCmd {
+    return compare ev {
+        KeyEvent(k) => {
+            compare k.code {
+                Up() => { 
+                    st.menu.selected = max(0, st.menu.selected - 1);
+                    AppCmdEnum::Redraw;
+                };
+                Down() => { 
+                    st.menu.selected = min((len(st.menu.items) to int) - 1, st.menu.selected + 1);
+                    AppCmdEnum::Redraw;
+                };
+                Esc() => AppCmdEnum::Quit;
+                Enter() => AppCmdEnum::Quit;
+                finally => AppCmdEnum::None;
+            };
+        }
+        Resize(_, _) => AppCmdEnum::Redraw;
+        Tick() => AppCmdEnum::None;
+        Quit() => AppCmdEnum::Quit;
+    };
+}
+
+fn view(st: &AppState, fr: &mut Frame) -> nothing {
+    let root = fr.area;
+    // optional: draw box border
+    // box_view(fr, root, "Surge TUI");
+    menu_view(st.menu, fr, root);
+}
+
+fn capture(idx: int, buf: &Buffer) -> nothing {
+    let text = buffer_to_string(buf);
+    let path = f"frames/frame_{idx}.txt";
+    let flags_bits: uint = (FS_O::WRITE to uint) | (FS_O::CREATE to uint) | (FS_O::TRUNC to uint);
+    let flags: FsOpenFlags = flags_bits to FsOpenFlags;
+    let _ = fs.write_string(path, &text, flags);
+}
+
+@entrypoint
+fn main() -> int {
+    let init: AppState = {
+        menu = MenuState { items = ["One", "Two", "Three"], selected = 0 }
+    };
+    return run_capture(init, update, view, capture);
+}

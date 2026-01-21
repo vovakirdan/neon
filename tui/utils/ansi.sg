@@ -1,0 +1,105 @@
+pragma module;
+
+import stdlib/strings::chr;
+
+// Append a decimal integer as ASCII.
+fn append_int_ascii(out: &mut byte[], val: int) -> nothing {
+    let mut v = val;
+    // Handle 0 explicitly.
+    if v == 0 {
+        out.push(ASCII::DIGIT_0 to byte);
+        return nothing;
+    }
+
+    // Handle negatives (shouldn't happen for cursor move, but keep safe).
+    if v < 0 {
+        out.push(ASCII::HYPHEN to byte);
+        v = -v;
+    }
+
+    // Collect digits in reverse order.
+    let mut tmp: byte[] = [];
+    while v > 0 {
+        let digit: uint = (v % 10) to uint;
+        let b: byte = (ASCII::DIGIT_0 + (digit to uint)) to byte;
+        tmp.push(b);
+        v = v / 10;
+    }
+
+    // Reverse digits into output.
+    let mut i: int = (tmp.__len() to int) - 1;
+    while i >= 0 {
+        let b: byte = clone(tmp[i]);
+        out.push(b);
+        if i == 0 { break; }
+        i = i - 1;
+    }
+    return nothing;
+}
+
+pub fn ansi_move(row1based: int, col1based: int) -> byte[] {
+    let mut out: byte[] = Array::<byte>::with_len(16:uint);
+    out.push(ASCII::ESC to byte);
+    out.push(ASCII::LEFT_BRACKET to byte);
+
+    append_int_ascii(&mut out, row1based);
+
+    out.push(ASCII::SEMICOLON to byte);
+
+    append_int_ascii(&mut out, col1based);
+
+    out.push(ASCII::H to byte);
+    return out;
+}
+
+fn utf8_encode_cp(cp: uint32) -> byte[] {
+    if (cp <= (0x7F to uint32)) {
+        let mut out: byte[] = [];
+        out.push(cp to byte);
+        return out;
+    }
+
+    let r = chr(cp);
+    return compare r {
+        Success(s) => {
+            s to byte[];
+        };
+        err => {
+            // return '?'
+            let mut out: byte[] = [];
+            out.push(ASCII::QUESTION to byte);
+            return out;
+        }
+    };
+}
+
+pub fn encode_run(run: &PatchRun) -> byte[] {
+    let mut out: byte[] = [];
+
+    let move_bytes = ansi_move(run.y + 1, run.x + 1);
+    out.extend(&move_bytes);
+
+    let n = len(run.cells) to int;
+    let mut i = 0;
+    while i < n {
+        let c = run.cells[i];
+        let bs = utf8_encode_cp(c.ch);
+        out.extend(&bs);
+        i = i + 1;
+    }
+    return out;
+}
+
+pub fn encode_all(runs: &PatchRun[]) -> byte[] {
+    let mut out: byte[] = [];
+    let mut i = 0;
+    let n = len(runs) to int;
+    while i < n {
+        let run = runs[i];
+        let bs = encode_run(run);
+        out.extend(&bs);
+        i = i + 1;
+    }
+
+    return out;
+}

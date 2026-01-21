@@ -1,0 +1,44 @@
+pragma module;
+
+pub type Size = {
+    w: int,
+    h: int,
+}
+
+pub type Rect = {
+    x: int,
+    y: int,
+    w: int,
+    h: int,
+}
+
+extern<Rect> {
+    pub fn new() -> Rect {
+        return default::<Rect>();
+    }
+
+    @overload
+    pub fn new(x: int, y: int, w: int, h: int) -> Rect {
+        return Rect { x, y, w, h };
+    }
+
+    pub fn __to(self: &Rect, _: string) -> string {
+        return f"Rect {{ x: {self.x}, y: {self.y}, w: {self.w}, h: {self.h} }}";
+    }
+}
+
+pub fn split_v(area: Rect, top_h: int) -> (Rect, Rect) {
+    let a: Rect = Rect { x = area.x, y = area.y, w = area.w, h = area.h };
+    let b: Rect = Rect { x = area.x, y = area.y + top_h, w = area.w, h = area.h - top_h };
+    return (a, b);
+}
+
+pub fn split_h(area: Rect, left_w: int) -> (Rect, Rect) {
+    let a: Rect = Rect { x = area.x, y = area.y, w = area.w, h = area.h };
+    let b: Rect = Rect { x = area.x + left_w, y = area.y, w = area.w - left_w, h = area.h };
+    return (a, b);
+}
+
+pub fn pad(area: &Rect, t: int, r: int, b: int, l: int) -> Rect {
+    return Rect { x = area.x + l, y = area.y + t, w = area.w - l - r, h = area.h - t - b };
+}
