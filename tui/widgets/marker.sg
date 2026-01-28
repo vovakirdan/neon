@@ -1,0 +1,63 @@
+pragma module::widgets;
+
+pub type MarkerAlign = uint8;
+
+pub enum MarkerAlignEnum: MarkerAlign = {
+    Left,
+    Right,
+}
+
+pub enum MarkerStyleEnum: string = {
+    Arrow = ">",
+    Bullet = "→",
+    Dot = "•",
+    Square = "■",
+    Circle = "○",
+    Diamond = "◇",
+    Triangle = "△",
+    TriangleDown = "▽",
+    TriangleLeft = "◀",
+    TriangleRight = "▶",
+    TriangleUp = "▲",
+    TriangleUpDown = "↕",
+    TriangleLeftRight = "↔",
+    TriangleUpDownLeftRight = "↕↔",
+    X = "×",
+    Check = "✓",
+    Cross = "✗",
+    Star = "★",
+    StarEmpty = "☆",
+    StarHalf = "★½",
+    StarEmptyHalf = "☆½",
+    Tick = "✔",
+}
+
+pub type Marker = {
+    text: string,
+    align: MarkerAlign,
+    // reserved: width override (if marker is multi-cell)
+    width: int
+}
+
+extern<Marker> {
+    // return default marker
+    pub fn new() -> Marker {
+        return Marker {
+            text = MarkerStyleEnum::Arrow,
+            align = MarkerAlignEnum::Left,
+            width = 2,
+        };
+    }
+}
+
+// Draw marker in a single row area (height=1). Caller passes the row rect.
+pub fn marker_draw(m: &Marker, fr: &mut Frame, row: Rect) -> nothing {
+    // v1: place marker at left or right edge inside row.
+    let x = compare m.align {
+        MarkerAlign::Left => row.x;
+        MarkerAlign::Right => row.x + row.w - m.width;
+    };
+    let area: Rect = { x = x, y = row.y, w = m.width, h = 1 };
+    draw_text(fr.buf, area, clone(m.text), ColorEnum::Default, ColorEnum::Default, ATTR_DEFAULT);
+    return nothing;
+}

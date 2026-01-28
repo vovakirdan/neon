@@ -17,6 +17,7 @@ pub enum ColorEnum = {
 
 pub type Attr = uint16;
 
+pub const ATTR_DEFAULT: Attr = 0;
 pub const ATTR_BOLD: Attr = 1;
 pub const ATTR_DIM: Attr = 2;
 pub const ATTR_REV: Attr = 4;

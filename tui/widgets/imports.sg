@@ -1,0 +1,3 @@
+pragma module::widgets;
+
+import ../utils::{Rect, pad, Color, ColorEnum, ATTR_REV, ATTR_DEFAULT, Attr, Frame, draw_text};

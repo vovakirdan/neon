@@ -1,7 +1,5 @@
 pragma module::widgets;
 
-import ../utils::{Rect, pad, Color, ColorEnum, ATTR_REV, Frame, draw_text};
-
 pub type MenuState = {
     items: string[],
     selected: int

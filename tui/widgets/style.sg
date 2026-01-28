@@ -1,0 +1,74 @@
+pragma module::widgets;
+
+pub type TextStyle = {
+    fg: Color,
+    bg: Color,
+    attr: Attr,
+}
+
+extern<TextStyle> {
+    // return default style
+    pub fn new() -> TextStyle {
+        return TextStyle {
+            fg = ColorEnum::Default,
+            bg = ColorEnum::Default,
+            attr = ATTR_DEFAULT,
+        };
+    }
+
+    // return parametrized new style
+    @overload
+    pub fn new(fg: Color, bg: Color, attr: Attr) -> TextStyle {
+        return TextStyle {
+            fg = fg,
+            bg = bg,
+            attr = attr,
+        };
+    }
+}
+
+pub type BoxStyle = {
+    border: bool,
+    // todo: border kind (single/double), title align, etc
+    pad_t: int,
+    pad_r: int,
+    pad_b: int,
+    pad_l: int
+}
+
+extern<BoxStyle> {
+    // return default style
+    pub fn new() -> BoxStyle {
+        return default::<BoxStyle>();
+    }
+
+    // return parametrized new style
+    @overload
+    pub fn new(border: bool, pad_t: int, pad_r: int, pad_b: int, pad_l: int) -> BoxStyle {
+        return BoxStyle {
+            border = border,
+            pad_t = pad_t,
+            pad_r = pad_r,
+            pad_b = pad_b,
+            pad_l = pad_l,
+        };
+    }
+}
+
+pub type ListStyle = {
+    normal: TextStyle,
+    selected: TextStyle,
+    // spacing between items in rows/cols (v1 keep = 0)
+    gap: int,
+};
+
+extern<ListStyle> {
+    // return default style
+    pub fn new() -> ListStyle {
+        return ListStyle {
+            normal = TextStyle::new(),
+            selected = TextStyle::new(),
+            gap = 0,
+        };
+    }
+}
