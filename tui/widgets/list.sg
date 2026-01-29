@@ -1,0 +1,95 @@
+pragma module::widgets;
+
+pub enum ListDir: uint8 = {
+    Vertical,
+    Horizontal,
+}
+
+pub contract ListData<T> {
+    pub fn count(self: &T) -> int;
+    pub fn item_text(self: &T, index: int) -> string;
+}
+
+pub type ListState = {
+    selected: int,
+    scroll: int, // first visible index (for vertical)
+    dir: uint8,
+}
+
+extern<ListState> {
+    // returns the default state
+    pub fn new() -> ListState {
+        return default::<ListState>();
+    }
+}
+
+// Config = detachable lego parts
+pub type ListConfig = {
+    style: ListStyle,
+    marker: Marker,
+    // marker width reserved via Marker.width
+    // future: show_scrollbar, wrap, ellipsis, etc.
+}
+
+extern<ListConfig> {
+    pub fn new() -> ListConfig {
+        return ListConfig {
+            style = ListStyle::new(),
+            marker = Marker::new(),
+        };
+    }
+}
+
+// Update helpers: move selection; keep it in bounds; adjust scroll.
+pub fn list_move(st: &mut ListState, total: int, delta: int, viewport: int) -> nothing {
+    if total <= 0 { st.selected = 0; st.scroll = 0; return nothing; }
+
+    let mut next: int = st.selected + delta;
+    if next < 0 { next = 0; }
+    if next >= total { next = total - 1; }
+    st.selected = next;
+
+    // Keep selected visible (vertical only in v1)
+    if st.selected < st.scroll { st.scroll = st.selected; }
+    let last_visible: int = st.scroll + viewport - 1;
+    if st.selected > last_visible { st.scroll = st.selected - (viewport - 1); }
+    if st.scroll < 0 { st.scroll = 0; }
+    return nothing;
+}
+
+// Draw list into full-screen area (caller can pass root rect).
+pub fn list_view<D: ListData<D>>(data: &D, st: &ListState, cfg: &ListConfig, fr: &mut Frame, area: &mut Rect) -> nothing {
+    // v1: vertical only; keep dir as reserved config for later
+    // v1: vertical only; keep dir as reserved config for later
+    let inner = area;
+
+    // Each row is height=1 for now.
+    let viewport: int = inner.h;
+    let total: int = data.count();
+
+    let mut row: int = 0;
+    while row < viewport {
+        let idx: int = st.scroll + row;
+        if idx >= total { break; }
+
+        let row_rect: Rect = { x = inner.x, y = inner.y + row, w = inner.w, h = 1 };
+
+        // marker area and text area
+        let marker_w: int = cfg.marker.width;
+        let text_rect: Rect = { x = row_rect.x + marker_w, y = row_rect.y, w = row_rect.w - marker_w, h = 1 };
+
+        if idx == st.selected {
+            marker_draw(cfg.marker, fr, row_rect);
+            let s: string = data.item_text(idx);
+            let ts = cfg.style.selected;
+            draw_text(fr.buf, text_rect, s, ts.fg, ts.bg, ts.attr);
+        } else {
+            let s: string = data.item_text(idx);
+            let ts = cfg.style.normal;
+            draw_text(fr.buf, text_rect, s, ts.fg, ts.bg, ts.attr);
+        }
+
+        row = row + 1;
+    }
+    return nothing;
+}

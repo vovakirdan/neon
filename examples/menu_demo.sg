@@ -1,38 +1,54 @@
 import ../tui::{Event, KeyEvent, Resize, Tick, Quit, AppCmdEnum, AppCmd, run, run_capture};
 import ../tui/utils::{Frame, buffer_to_string, Buffer};
-import ../tui/widgets::{MenuState, menu_view};
+import ../tui/widgets::{ListState, ListConfig, list_view, list_move};
 import stdlib/term::{Up, Down, Esc, Enter};
 
 import stdlib/fs;
 
+// ---- App state ----
+
 type AppState = {
-    menu: MenuState
+    items: string[],
+    list: ListState,
+    cfg: ListConfig,
 };
 
 fn max(a: int, b: int) -> int {
-    if a > b {
-        return a;
-    }
+    if a > b { return a; }
     return b;
 }
 
 fn min(a: int, b: int) -> int {
-    if a < b {
-        return a;
-    }
+    if a < b { return a; }
     return b;
 }
+
+// Implement the contract for AppState.
+extern<AppState> {
+    pub fn count(self: &AppState) -> int {
+        return len(self.items) to int;
+    }
+
+    pub fn item_text(self: &AppState, index: int) -> string {
+        return clone(self.items[index]);
+    }
+}
+
+// ---- Update / View ----
 
 fn update(st: &mut AppState, ev: Event) -> AppCmd {
     return compare ev {
         KeyEvent(k) => {
             compare k.code {
-                Up() => { 
-                    st.menu.selected = max(0, st.menu.selected - 1);
+                Up() => {
+                    // viewport = current frame height (unknown here)
+                    // v1: assume full screen height minus padding in menu layout.
+                    // We'll pass a conservative viewport (e.g. 20) for now; better: store last_frame_h in state.
+                    list_move(st.list, st.count(), -1, 20);
                     AppCmdEnum::Redraw;
                 };
-                Down() => { 
-                    st.menu.selected = min((len(st.menu.items) to int) - 1, st.menu.selected + 1);
+                Down() => {
+                    list_move(st.list, st.count(), 1, 20);
                     AppCmdEnum::Redraw;
                 };
                 Esc() => AppCmdEnum::Quit;
@@ -48,9 +64,12 @@ fn update(st: &mut AppState, ev: Event) -> AppCmd {
 
 fn view(st: &AppState, fr: &mut Frame) -> nothing {
     let root = fr.area;
-    // optional: draw box border
-    // box_view(fr, root, "Surge TUI");
-    menu_view(st.menu, fr, root);
+
+    // IMPORTANT: viewport should be derived from actual area height.
+    // Here we compute it in view and keep list.scroll stable by making update use a stored viewport later.
+    // For now just render; list_view uses inner.h as viewport anyway.
+
+    list_view(st, st.list, st.cfg, fr, root);
 }
 
 fn capture(idx: int, buf: &Buffer) -> nothing {
@@ -63,8 +82,17 @@ fn capture(idx: int, buf: &Buffer) -> nothing {
 
 @entrypoint
 fn main() -> int {
-    let init: AppState = {
-        menu = MenuState { items = ["One", "Two", "Three"], selected = 0 }
+    let items: Array<string> = ["One", "Two", "Three"];
+    let mut st: AppState = AppState {
+        items = items,
+        list = ListState::new(),
+        cfg = ListConfig::new(),
     };
-    return run_capture(init, update, view, capture);
+
+    // Customize: marker / styles — edit config structs, no builders.
+    // Example: change marker text or width:
+    // st.cfg.marker.text = MarkerStyleEnum::TriangleRight;
+    // st.cfg.marker.width = 2;
+
+    return run_capture(st, update, view, capture);
 }

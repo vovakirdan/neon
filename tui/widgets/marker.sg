@@ -54,8 +54,8 @@ extern<Marker> {
 pub fn marker_draw(m: &Marker, fr: &mut Frame, row: Rect) -> nothing {
     // v1: place marker at left or right edge inside row.
     let x = compare m.align {
-        MarkerAlign::Left => row.x;
-        MarkerAlign::Right => row.x + row.w - m.width;
+        MarkerAlignEnum::Left => row.x;
+        MarkerAlignEnum::Right => row.x + row.w - m.width;
     };
     let area: Rect = { x = x, y = row.y, w = m.width, h = 1 };
     draw_text(fr.buf, area, clone(m.text), ColorEnum::Default, ColorEnum::Default, ATTR_DEFAULT);
