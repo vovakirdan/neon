@@ -1,6 +1,6 @@
 import ../tui::{Event, KeyEvent, Resize, Tick, Quit, AppCmdEnum, AppCmd, run, run_capture};
 import ../tui/utils::{Frame, buffer_to_string, Buffer};
-import ../tui/widgets::{ListState, ListConfig, list_view, list_move};
+import ../tui/widgets::{ListState, ListConfig, list_view, list_move, ListStyle, MarkerStyleEnum, MarkerAlignEnum, Marker};
 import stdlib/term::{Up, Down, Esc, Enter};
 
 import stdlib/fs;
@@ -83,10 +83,14 @@ fn capture(idx: int, buf: &Buffer) -> nothing {
 @entrypoint
 fn main() -> int {
     let items: Array<string> = ["One", "Two", "Three"];
+    let list_config = ListConfig {
+        style: ListStyle::new(),
+        marker: Marker { text: MarkerStyleEnum::TriangleRight, align: MarkerAlignEnum::Left, width: 3 },
+    };
     let mut st: AppState = AppState {
         items = items,
         list = ListState::new(),
-        cfg = ListConfig::new(),
+        cfg = list_config,
     };
 
     // Customize: marker / styles — edit config structs, no builders.

@@ -38,7 +38,8 @@ fn append_int_ascii(out: &mut byte[], val: int) -> nothing {
 }
 
 pub fn ansi_move(row1based: int, col1based: int) -> byte[] {
-    let mut out: byte[] = Array::<byte>::with_len(16:uint);
+    let mut out: byte[] = [];
+    out.reserve(16:uint);
     out.push(ASCII::ESC to byte);
     out.push(ASCII::LEFT_BRACKET to byte);
 
