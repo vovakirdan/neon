@@ -1,7 +1,7 @@
 import ../tui::{Event, KeyEvent, Resize, Tick, Quit, AppCmdEnum, AppCmd, run, run_capture};
-import ../tui/utils::{Frame, buffer_to_string, Buffer};
-import ../tui/widgets::{ListState, ListConfig, list_view, list_move, ListStyle, MarkerStyleEnum, MarkerAlignEnum, Marker};
-import stdlib/term::{Up, Down, Esc, Enter};
+import ../tui/utils::{Frame, buffer_to_string, Buffer, ColorEnum, ATTR_BOLD};
+import ../tui/widgets::{ListState, ListConfig, list_view, list_move, ListStyle, TextStyle, MarkerStyleEnum, MarkerAlignEnum, Marker};
+import stdlib/term::{Up, Down, Esc, Enter, term_size};
 
 import stdlib/fs;
 
@@ -11,6 +11,7 @@ type AppState = {
     items: string[],
     list: ListState,
     cfg: ListConfig,
+    viewport_h: int,
 };
 
 fn max(a: int, b: int) -> int {
@@ -39,24 +40,24 @@ extern<AppState> {
 fn update(st: &mut AppState, ev: Event) -> AppCmd {
     return compare ev {
         KeyEvent(k) => {
-            compare k.code {
+            ret compare k.code {
                 Up() => {
-                    // viewport = current frame height (unknown here)
-                    // v1: assume full screen height minus padding in menu layout.
-                    // We'll pass a conservative viewport (e.g. 20) for now; better: store last_frame_h in state.
-                    list_move(st.list, st.count(), -1, 20);
-                    AppCmdEnum::Redraw;
+                    list_move(st.list, st.count(), -1, st.viewport_h);
+                    ret AppCmdEnum::Redraw;
                 };
                 Down() => {
-                    list_move(st.list, st.count(), 1, 20);
-                    AppCmdEnum::Redraw;
+                    list_move(st.list, st.count(), 1, st.viewport_h);
+                    ret AppCmdEnum::Redraw;
                 };
                 Esc() => AppCmdEnum::Quit;
                 Enter() => AppCmdEnum::Quit;
                 finally => AppCmdEnum::None;
             };
         }
-        Resize(_, _) => AppCmdEnum::Redraw;
+        Resize(_, h) => {
+            st.viewport_h = h;
+            ret AppCmdEnum::Redraw;
+        };
         Tick() => AppCmdEnum::None;
         Quit() => AppCmdEnum::Quit;
     };
@@ -82,15 +83,21 @@ fn capture(idx: int, buf: &Buffer) -> nothing {
 
 @entrypoint
 fn main() -> int {
+    let (_, viewport_h) = term_size();
     let items: Array<string> = ["One", "Two", "Three"];
     let list_config = ListConfig {
-        style: ListStyle::new(),
+        style: ListStyle {
+            normal = TextStyle::new(),
+            selected = TextStyle::new(ColorEnum::Black, ColorEnum::White, ATTR_BOLD),
+            gap = 0,
+        },
         marker: Marker { text: MarkerStyleEnum::TriangleRight, align: MarkerAlignEnum::Left, width: 3 },
     };
     let mut st: AppState = AppState {
         items = items,
         list = ListState::new(),
         cfg = list_config,
+        viewport_h = viewport_h,
     };
 
     // Customize: marker / styles — edit config structs, no builders.

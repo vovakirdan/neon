@@ -87,33 +87,43 @@ pub fn run_capture<T: State>(
                 compare ev_opt {
                     nothing => break;
                     Some(ev) => {
+                        let mut should_redraw: bool = false;
                         {
                             let cmd = update(&mut st, ev);
                             if (cmd == AppCmdEnum::Quit) {
                                 break;
                             }
+                            should_redraw = cmd == AppCmdEnum::Redraw;
                         }
 
-                        clear(&mut next);
-                        let mut fr2 = frame(&mut next);
-                        view(&st, &mut fr2);
-
-                        {
-                            capture(frame_index, &next);
-                        }
-                        frame_index = frame_index + 1;
-
-                        {
-                            let runs = prev.diff(&next);
-                            if len(runs) > (0 to uint) {
-                                term.term_write(encode_all(runs));
-                                term.term_flush();
+                        if should_redraw {
+                            let (cur_w, cur_h) = term.term_size();
+                            if cur_w != next.w || cur_h != next.h {
+                                resize(&mut prev, cur_w, cur_h);
+                                resize(&mut next, cur_w, cur_h);
                             }
-                        }
 
-                        // swap buffers
-                        prev = next;
-                        next = Buffer.new(prev.w, prev.h);
+                            clear(&mut next);
+                            let mut fr2 = frame(&mut next);
+                            view(&st, &mut fr2);
+
+                            {
+                                capture(frame_index, &next);
+                            }
+                            frame_index = frame_index + 1;
+
+                            {
+                                let runs = prev.diff(&next);
+                                if len(runs) > (0 to uint) {
+                                    term.term_write(encode_all(runs));
+                                    term.term_flush();
+                                }
+                            }
+
+                            // swap buffers
+                            prev = next;
+                            next = Buffer.new(prev.w, prev.h);
+                        }
                     };
                 };
             };

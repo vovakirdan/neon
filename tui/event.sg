@@ -20,10 +20,10 @@ pub type Event = KeyEvent(Key) | Resize(int, int) | Tick() | Quit();
 pub fn from_term(ev: term.TermEvent) -> Event? {
     let out: Event? = compare ev {
         term.Key(termKeyEvent) => {
-            Some(KeyEvent(Key { code = termKeyEvent.key, mods = termKeyEvent.mods }));
+            ret Some(KeyEvent(Key { code = termKeyEvent.key, mods = termKeyEvent.mods }));
         };
         term.Resize(w, h) => {
-            Some(Resize(w, h));
+            ret Some(Resize(w, h));
         };
         term.Eof() => nothing; 
     };

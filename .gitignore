@@ -7,3 +7,6 @@
 
 # Surge build artifacts
 target/
+
+# Neon debug artifacts
+frames/

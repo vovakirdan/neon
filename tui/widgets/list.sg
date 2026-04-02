@@ -49,6 +49,12 @@ pub fn list_move(st: &mut ListState, total: int, delta: int, viewport: int) -> n
     if next >= total { next = total - 1; }
     st.selected = next;
 
+    if viewport <= 0 {
+        st.scroll = st.selected;
+        if st.scroll < 0 { st.scroll = 0; }
+        return nothing;
+    }
+
     // Keep selected visible (vertical only in v1)
     if st.selected < st.scroll { st.scroll = st.selected; }
     let last_visible: int = st.scroll + viewport - 1;

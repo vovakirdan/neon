@@ -53,6 +53,83 @@ pub fn ansi_move(row1based: int, col1based: int) -> byte[] {
     return out;
 }
 
+fn ansi_csi(out: &mut byte[]) -> nothing {
+    out.push(ASCII::ESC to byte);
+    out.push(ASCII::LEFT_BRACKET to byte);
+    return nothing;
+}
+
+fn append_sgr_param(out: &mut byte[], code: int, wrote_any: &mut bool) -> nothing {
+    if *wrote_any {
+        out.push(ASCII::SEMICOLON to byte);
+    }
+    append_int_ascii(out, code);
+    *wrote_any = true;
+    return nothing;
+}
+
+fn fg_sgr_code(color: Color) -> int {
+    return compare color {
+        ColorEnum::Default => 39;
+        ColorEnum::Black => 30;
+        ColorEnum::Red => 31;
+        ColorEnum::Green => 32;
+        ColorEnum::Yellow => 33;
+        ColorEnum::Blue => 34;
+        ColorEnum::Magenta => 35;
+        ColorEnum::Cyan => 36;
+        ColorEnum::White => 37;
+    };
+}
+
+fn bg_sgr_code(color: Color) -> int {
+    return compare color {
+        ColorEnum::Default => 49;
+        ColorEnum::Black => 40;
+        ColorEnum::Red => 41;
+        ColorEnum::Green => 42;
+        ColorEnum::Yellow => 43;
+        ColorEnum::Blue => 44;
+        ColorEnum::Magenta => 45;
+        ColorEnum::Cyan => 46;
+        ColorEnum::White => 47;
+    };
+}
+
+fn append_sgr_style(out: &mut byte[], fg: Color, bg: Color, attr: Attr) -> nothing {
+    ansi_csi(out);
+
+    let mut wrote_any: bool = false;
+    let attr_bits: uint = attr to uint;
+    append_sgr_param(out, 0, &mut wrote_any);
+    append_sgr_param(out, fg_sgr_code(fg), &mut wrote_any);
+    append_sgr_param(out, bg_sgr_code(bg), &mut wrote_any);
+
+    if ((attr_bits & (ATTR_BOLD to uint)) != 0:uint) {
+        append_sgr_param(out, 1, &mut wrote_any);
+    }
+    if ((attr_bits & (ATTR_DIM to uint)) != 0:uint) {
+        append_sgr_param(out, 2, &mut wrote_any);
+    }
+    if ((attr_bits & (ATTR_REV to uint)) != 0:uint) {
+        append_sgr_param(out, 7, &mut wrote_any);
+    }
+
+    out.push(ASCII::LOWER_M to byte);
+    return nothing;
+}
+
+fn append_sgr_reset(out: &mut byte[]) -> nothing {
+    ansi_csi(out);
+    out.push(ASCII::DIGIT_0 to byte);
+    out.push(ASCII::LOWER_M to byte);
+    return nothing;
+}
+
+fn style_changed(prev: &Cell, next: &Cell) -> bool {
+    return prev.fg != next.fg || prev.bg != next.bg || prev.attr != next.attr;
+}
+
 fn utf8_encode_cp(cp: uint32) -> byte[] {
     if (cp <= (0x7F to uint32)) {
         let mut out: byte[] = [];
@@ -63,13 +140,13 @@ fn utf8_encode_cp(cp: uint32) -> byte[] {
     let r = chr(cp);
     return compare r {
         Success(s) => {
-            s to byte[];
+            ret s to byte[];
         };
         err => {
             // return '?'
             let mut out: byte[] = [];
             out.push(ASCII::QUESTION to byte);
-            return out;
+            ret out;
         }
     };
 }
@@ -84,6 +161,11 @@ pub fn encode_run(run: &PatchRun) -> byte[] {
     let mut i = 0;
     while i < n {
         let c = run.cells[i];
+        if i == 0 {
+            append_sgr_style(&mut out, c.fg, c.bg, c.attr);
+        } else if style_changed(run.cells[i - 1], c) {
+            append_sgr_style(&mut out, c.fg, c.bg, c.attr);
+        }
         let bs = utf8_encode_cp(c.ch);
         out.extend(&bs);
         i = i + 1;
@@ -100,6 +182,10 @@ pub fn encode_all(runs: &PatchRun[]) -> byte[] {
         let bs = encode_run(run);
         out.extend(&bs);
         i = i + 1;
+    }
+
+    if n > 0 {
+        append_sgr_reset(&mut out);
     }
 
     return out;
